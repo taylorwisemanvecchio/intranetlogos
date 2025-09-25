@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Display 1920x250</title>
+  <link href="https://fonts.googleapis.com/css?family=Lato:100,300" rel="stylesheet" />
+  <style>
+    html, body {
+      font-size: 22px;
+      height: 250px;
+      width: 1920px;
+      margin: 0;
+      color: white;
+      font-family: "Lato", sans-serif;
+      background: linear-gradient(to right, rgb(33, 147, 176), rgb(109, 213, 237));
+      overflow: hidden;
+    }
+
+    .container {
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 40px;
+      box-sizing: border-box;
+    }
+
+    .temperature-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 40px;
+    }
+
+    #place {
+      font-weight: 800;
+      font-size: 1.4rem;
+    }
+
+    #temperature {
+      font-size: 4rem;
+      font-weight: 300;
+    }
+
+    .max-min-temperature {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 1.3rem;
+      font-weight: 600;
+      padding-left: 10px;
+    }
+
+    .description {
+      font-size: 2rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    #forecast-container {
+      display: flex;
+      flex-direction: row;
+      gap: 60px;
+      align-items: center;
+      font-size: 1.6rem;
+    }
+
+    .day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-weight: 700;
+    }
+
+    .forecast-temp {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+	.weather-block {
+	  display: flex;
+	  flex-direction: row;
+	  align-items: center;
+	  gap: 20px;
+	}
+
+
+    .citation {
+      position: absolute;
+      bottom: 5px;
+      left: 10px;
+      color: #ccc;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="temperature-container">
+      <div>
+        <span id="place">Weather Today</span>
+        <div class="description" id="summary">Partly Cloudy</div>
+      </div>
+      <div class="weather-block">
+		<div class="image" id="icon0"></div>
+		<div class="temperature">
+			<span id="temperature">76.5</span>
+			<div class="max-min-temperature">
+			<span id="max-temperature">High: 80</span>
+			<span id="min-temperature">Low: 68</span>
+			</div>
+		</div>
+</div>
+
+    </div>
+    <div id="forecast-container"></div>
+  </div>
+  <i id="message" class="citation"></i>
+
+  <script>
+    "use strict";
+    const city = "Mount Laurel NJ";
+    const units = "imperial";
+    const lang = "en";
+    const forecastDays = 3;
+
+    const temperature = document.getElementById("temperature");
+    const icon0 = document.getElementById("icon0");
+    const maxTemperature = document.getElementById("max-temperature");
+    const minTemperature = document.getElementById("min-temperature");
+    const summary = document.getElementById("summary");
+    const place = document.getElementById("place");
+    const forecastContainer = document.getElementById("forecast-container");
+    const message = document.getElementById("message");
+
+    getWeather();
+    setInterval(getWeather, 600000);
+
+    function getWeather() {
+      fetch(
+        `https://pisignage.com/api/getweather?place=${city}&units=${units}&lang=${lang}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          mode: "cors"
+        }
+      )
+        .then(res => res.json())
+        .then(data => {
+          if (!(data && data.success)) {
+            if (data.stat_message) message.textContent = data.stat_message;
+            return console.log("Could not get weather data, reason: " + data.stat_message);
+          }
+
+          message.textContent = "Weather forecast powered by OpenWeather";
+          const weatherData = data.data.openweather;
+
+          place.textContent = weatherData.cityName.split(",")[0];
+          temperature.textContent = weatherData.main.temp.toFixed(1);
+          maxTemperature.textContent = `High: ${weatherData.daily[0].temp.max.toFixed(0)}`;
+          minTemperature.textContent = `Low: ${weatherData.daily[0].temp.min.toFixed(0)}`;
+          summary.textContent = weatherData.weather[0].description;
+
+          icon0.innerHTML = `<img src="${weatherData.weather[0].icon}" height="100" width="100">`;
+
+          forecastContainer.innerHTML = "";
+          for (let i = 1; i <= forecastDays && i < weatherData.daily.length; i++) {
+            const day = weatherData.daily[i];
+
+            const icon = document.createElement("img");
+            icon.src = day.weather[0].icon;
+            icon.width = 70;
+
+            const temp = document.createElement("div");
+            temp.className = "forecast-temp";
+            temp.textContent = day.temp.max.toFixed(0);
+
+            const label = document.createElement("div");
+            label.textContent = convertToWeekday(day.dt);
+
+            const forecastItem = document.createElement("div");
+            forecastItem.className = "day";
+            forecastItem.appendChild(label);
+            forecastItem.appendChild(temp);
+            forecastItem.appendChild(icon);
+
+            forecastContainer.appendChild(forecastItem);
+          }
+        })
+        .catch(error => {
+          message.textContent = error;
+        });
+    }
+
+    function convertToWeekday(sec) {
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return days[(new Date(sec * 1000)).getDay()];
+    }
+  </script>
+</body>
+</html>
